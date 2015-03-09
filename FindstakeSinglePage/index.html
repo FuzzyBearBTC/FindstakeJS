@@ -421,10 +421,10 @@ window.AppLogger.logMint = function (arr) {
   var mpfoundstakes={};
 	var tmp = '<a href="javascript:void(0)" class="list-group-item active"><span class="glyphicon glyphicon-camera"></span> Found stakes</a>';
 	AppLogger.arrmints.forEach(function (result) {
-    var keydups='fs'+moment.unix(result.foundstake).format('MM_DD_hh_mm');
+    var keydups='fs'+moment.unix(result.foundstake).format('MM_DD_HH_mm');
     if (mpfoundstakes[keydups] == null){
       mpfoundstakes[keydups]= true;
-      var t = moment.unix(result.foundstake).format('MMM Do, hh:mm');
+      var t = moment.unix(result.foundstake).format('MMM Do, H:mm');
       
         console.log('Mint@' + t + ' min diff: ' + result.mindifficulty.toFixed(1));
       tmp += '<a href="javascript:void(0)" class="list-group-item"><span class="glyphicon glyphicon-leaf"></span> ' + t +
@@ -566,13 +566,13 @@ App.LastKnownBlocktime=1;
                  
           //var txkey='to'+inputAdrtx+'_'+inputAdrtxn;
           if (txkey) {      
-          //jasonp call
+            //jasonp call
             $.ajax({
-              url: "http://peercoinfindstakedata.divshot.io/json/"+ txkey +".json",
-              dataType: "jsonp",
-              jsonpCallback: txkey, /* Unique function name */
-              success: function(dbdata){
-                
+                url: "https://peercoinfindstakedata.divshot.io/json/"+ txkey +".json",
+                dataType: "jsonp",
+                jsonpCallback: txkey /* Unique function name */
+            })
+            .done(function(dbdata) {
                      var tpldata = {
                         BlockFromTime : dbdata.BlockFromTime,
                         StakeModifier : BigInteger.fromByteArrayUnsigned(Crypto.util.hexToBytes(dbdata.StakeModifier16)),
@@ -582,13 +582,16 @@ App.LastKnownBlocktime=1;
                         PrevTxOutValue : dbdata.PrevTxOutValue 
                       };
                   
-                    App.Staketemplates.add(tpldata);   
-                    cb();                    
- 
-              }
-            });      
-              
-          }  
+                    App.Staketemplates.add(tpldata);  
+            })
+            .fail(function() {
+              console.log('failed to get tx data ');
+            })
+            .always(function() {
+              cb();
+            });
+             
+          }   
         };      
               
             
@@ -598,36 +601,42 @@ App.LastKnownBlocktime=1;
       var   prog=0.10;
   	  if (peercoinaddress) {      
       //jasonp call
-        $.ajax({
-          url: "http://hook.io/jointhepartypooper/hookGetFindstakeData?PeercoinAddress="+ peercoinaddress+"&run=true",
-          accepts: { text: "*/*" },
-          dataType: "jsonp",
-          jsonpCallback: peercoinaddress, /* Unique function name */
-          success: function(dbdata){
-            //"txo" : ["to79c0bcd9a15152a0a1582110f531c52eda9bcc803a596fcd2d72f54063706eb4_1"]
-            var ctotal=dbdata.txo.length, count=0;
-            App.LastKnownDifficulty = parseFloat(dbdata.difficulty);
-            dbdata.txo.forEach(function(txout) {  
-               getstakedata(txout, function() {
-               
-                 count++;
-                 prog=prog+0.01;
-                 AppLogger.logProgress(prog, '');
-                 if (count==ctotal) {
+            $.ajax({
+              url: "https://hook.io/jointhepartypooper/hookGetFindstakeData?PeercoinAddress="+ peercoinaddress+"&run=true",
+              accepts: { text: "*/*" },
+              dataType: "jsonp",
+              jsonpCallback: peercoinaddress /* Unique function name */
+            })
+            .done(function(dbdata) {
+                var ctotal=dbdata.txo.length, count=0;
+                App.LastKnownDifficulty = parseFloat(dbdata.difficulty);
+                dbdata.txo.forEach(function(txout) {  
+                   getstakedata(txout, function() {
                    
-                      //'AppLogger.logProgress(0.11, '');
-                      AppLogger.log('Data successfully retrieved');
-                      AppLogger.log('Starting...');
-                      btn.style.display = 'none';
-                      btnFs.style.display = 'block';   
+                     count++;
+                     prog=prog+0.01;
+                     AppLogger.logProgress(prog, '');
+                     if (count==ctotal) {
+                       
+                          //'AppLogger.logProgress(0.11, '');
+                          AppLogger.log('Data successfully retrieved');
+                          AppLogger.log('Starting...');
+                          btn.style.display = 'none';
+                          btnFs.style.display = 'block';   
 
-                      setTimeout(function(){ btnFs.click(); }, 500);                   
-                 }               
-               });             
-            });               
-          }
-        });                
-      }  
+                          setTimeout(function(){ btnFs.click(); }, 500);                   
+                     }               
+                   });             
+                });  
+            })
+            .fail(function() {
+              //window.Applogger.log('failed to get Address data ');
+            })
+            .always(function() {
+              
+            });   
+                
+      }   
 		}
 		return cancelDefaultAction(e);
 	});
